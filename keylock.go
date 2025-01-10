@@ -1,4 +1,3 @@
-//nolint:wsl
 package keylock
 
 import "sync"
