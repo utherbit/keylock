@@ -3,20 +3,20 @@ package keylock
 
 import "sync"
 
-type KeyLocker struct {
+type KeyLocker[T comparable] struct {
 	mu    sync.Mutex
-	locks map[string]*refCountedLock
+	locks map[T]*refCountedLock
 }
 
-func NewKeyLocker() *KeyLocker {
-	return &KeyLocker{
+func NewKeyLocker[T comparable]() *KeyLocker[T] {
+	return &KeyLocker[T]{
 		mu:    sync.Mutex{},
-		locks: make(map[string]*refCountedLock),
+		locks: make(map[T]*refCountedLock),
 	}
 }
 
 // Do блокирует вызовы для идентичных ключей, до выполнения переданной функции fn
-func (kl *KeyLocker) Do(key string, fn func()) {
+func (kl *KeyLocker[T]) Do(key T, fn func()) {
 	kl.lockKey(key)
 	defer kl.unlockKey(key)
 
@@ -26,12 +26,12 @@ func (kl *KeyLocker) Do(key string, fn func()) {
 // Lock блокирует вызовы для идентичных ключей, до вызова unlock
 //
 // возвращает функцию unlock, которую требуется вызвать для освобождения ключа
-func (kl *KeyLocker) Lock(key string) (unlock func()) {
+func (kl *KeyLocker[T]) Lock(key T) (unlock func()) {
 	kl.lockKey(key)
 	return func() { kl.unlockKey(key) }
 }
 
-func (kl *KeyLocker) lockKey(key string) {
+func (kl *KeyLocker[T]) lockKey(key T) {
 	kl.mu.Lock()
 
 	locker, exist := kl.locks[key]
@@ -45,7 +45,7 @@ func (kl *KeyLocker) lockKey(key string) {
 	locker.Lock()
 }
 
-func (kl *KeyLocker) unlockKey(key string) {
+func (kl *KeyLocker[T]) unlockKey(key T) {
 	kl.mu.Lock()
 	defer kl.mu.Unlock()
 

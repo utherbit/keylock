@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleNewKeyLocker() {
-	locker := NewKeyLocker()
+	locker := NewKeyLocker[string]()
 
 	unlockSomeKey := locker.Lock("some-key")
 	defer unlockSomeKey()
@@ -19,7 +19,7 @@ func ExampleNewKeyLocker() {
 }
 
 func ExampleKeyLocker_Lock() {
-	keyLocker := NewKeyLocker()
+	keyLocker := NewKeyLocker[string]()
 
 	unlockSomeKey := keyLocker.Lock("some-key")
 	fmt.Println("some-key is locked;")
@@ -63,7 +63,7 @@ func TestKeyLocker(t *testing.T) {
 
 	t.Run("check locked", func(t *testing.T) {
 		var (
-			locker = NewKeyLocker()
+			locker = NewKeyLocker[string]()
 			unlock func()
 		)
 
@@ -84,7 +84,7 @@ func TestKeyLocker(t *testing.T) {
 	})
 
 	t.Run("check multiple key locks", func(t *testing.T) {
-		locker := NewKeyLocker()
+		locker := NewKeyLocker[string]()
 
 		unlock1 := locker.Lock("1")
 		unlock2 := locker.Lock("2")
@@ -104,7 +104,7 @@ func TestKeyLocker(t *testing.T) {
 	})
 
 	t.Run("check deleting key locker on unlock", func(t *testing.T) {
-		locker := NewKeyLocker()
+		locker := NewKeyLocker[string]()
 
 		unlock := locker.Lock("1")
 		// Ключ должен существовать после lock
@@ -120,7 +120,7 @@ func TestKeyLocker(t *testing.T) {
 
 func TestParallelLocks(t *testing.T) {
 	var (
-		locker = NewKeyLocker()
+		locker = NewKeyLocker[string]()
 		wg     sync.WaitGroup
 
 		countParallels = 0
@@ -148,7 +148,7 @@ func TestParallelLocks(t *testing.T) {
 
 func TestCorrectQueueLen(t *testing.T) {
 	var (
-		locker = NewKeyLocker()
+		locker = NewKeyLocker[string]()
 
 		unlockFn = make(chan struct{})
 		fnCalled = make(chan struct{})
@@ -178,18 +178,18 @@ func TestCorrectQueueLen(t *testing.T) {
 	requireRefCount(t, locker, "key", 0)
 }
 
-func requireRefCount(t *testing.T, keyLocker *KeyLocker, key string, expectCount int) {
+func requireRefCount[T comparable](t *testing.T, keyLocker *KeyLocker[T], key T, expectCount int) {
 	t.Helper()
 
 	actualCount := refCount(keyLocker, key)
 	require.Equalf(t, expectCount, actualCount, "expected %d count ref by key \"%s\", got %d", expectCount, key, actualCount)
 }
 
-func isLocked(kl *KeyLocker, key string) bool {
+func isLocked[T comparable](kl *KeyLocker[T], key T) bool {
 	return refCount(kl, key) > 0
 }
 
-func refCount(kl *KeyLocker, key string) int {
+func refCount[T comparable](kl *KeyLocker[T], key T) int {
 	kl.mu.Lock()
 	defer kl.mu.Unlock()
 
